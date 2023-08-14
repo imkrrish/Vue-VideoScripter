@@ -92,8 +92,7 @@ export default {
     handleUploadButtonClick() {
       this.uploading = true;
       const formData = new FormData();
-      formData.append("video", this.videoFile);
-      formData.append("title", this.videoFile.name);
+      formData.append("file", this.videoFile);
       axios
         .post("http://127.0.0.1:5000/upload", formData, {
           headers: {
@@ -101,9 +100,9 @@ export default {
           },
         })
         .then((response) => {
-          console.log("File uploaded successfully:", response.data);
+          console.log("File uploaded successfully:", response);
           this.video_id = response.data.video_id;
-          console.log(this.video_id);
+          // console.log(this.video_id);
           this.uploading = false;
           this.uploaded = true;
         })

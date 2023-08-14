@@ -1,141 +1,170 @@
 <template>
-  <div>
-    <div class="video-container">
-      <VideoPlayer ref="videoPlayer" :videoSrc="videoSource" @timeupdate="handleTimeUpdate" />
+  <div class="subtitlecontainer">
+    <textarea
+      v-model="subtitle_text"
+      placeholder="Write subtitles for your video"
+      rows="40"
+      name="subtitle_text"
+      id="subtitle_text"
+      cols="50"
+      class="ui-autocomplete-input"
+      autocomplete="off"
+      role="textbox"
+      aria-autocomplete="list"
+      aria-haspopup="true"
+      required
+    ></textarea>
+    <p v-if="isTextArea" class="error-message">Please enter a subtitle before submitting.</p>
+    <!-- <button class="button" @click="submitSubtitles">Submit</button> -->
+
+    <div class="button-container">
+      <!-- upload video Button -->
+      <button v-if="!submited" class="button" :disabled="submiting" @click="submitSubtitles">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="16" viewBox="0 0 15 16">
+          <path fill="currentColor" d="M12.49 7.14L3.44 2.27c-.76-.41-1.64.3-1.4 1.13l1.24 4.34c.05.18.05.36 0 .54l-1.24 4.34c-.24.83.64 1.54 1.4 1.13l9.05-4.87a.98.98 0 0 0 0-1.72Z" />
+        </svg>
+        Submit Subtitles
+      </button>
+
+      <!-- Next Page Button -->
+      <router-link v-if="submited" :to="{ name: 'VideoPlayer', params: { video_id: video_id } }">
+        <button class="button">
+          <svg class="next-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+            <path fill="currentColor" d="M9.31 6.71a.996.996 0 0 0 0 1.41L13.19 12l-3.88 3.88a.996.996 0 1 0 1.41 1.41l4.59-4.59a.996.996 0 0 0 0-1.41L10.72 6.7c-.38-.38-1.02-.38-1.41.01z" />
+          </svg>
+          Next
+        </button>
+      </router-link>
+
+      <template v-if="submiting">
+        <div class="loading">
+          <div class="loading-circle"></div>
+        </div>
+      </template>
     </div>
-    <p v-if="currentSubtitle">{{ currentSubtitle }}</p>
-    <button v-if="!showInput && !markingEnd" @click="markTimestamp">Mark Start Timestamp</button>
-    <ul>
-      <li v-for="(entry, index) in timestampSubtitles" :key="index">{{ entry.start_timestamp }} -{{ entry.subtitle }} - {{ entry.end_timestamp }}</li>
-    </ul>
-    <div>
-      <input v-if="showInput" v-model="subtitleInput" placeholder="Enter Subtitle" />
-      <button v-if="!markingEnd && showInput" @click="addStartTime">Add Subtitle</button>
-      <button v-if="markingEnd" @click="addEndTime">Add End Time</button>
-      <button v-if="showInput" @click="cancelSubtitle">Cancel</button>
-    </div>
-    <button @click="submitSubtitles">Submit</button>
   </div>
 </template>
 
 <script>
 import axios from "axios";
-import VideoPlayer from "./VideoPlayer.vue";
 
 export default {
   name: "AddSubtitles",
-  components: {
-    VideoPlayer,
-  },
   data() {
     return {
-      // videoSource: null,
-      videoSource: `http://127.0.0.1:5000/video/${this.$route.params.video_id}/stream`,
-      timestampSubtitles: [],
-      showInput: false,
-      subtitleInput: "",
-      markedStartTime: null,
-      markedEndTime: null,
-      markingEnd: false,
-      currentSubtitle: null,
+      subtitle_text: "",
+      video_id: null,
+      isTextArea: null,
+      submiting: false,
+      submited: false,
     };
   },
   mounted() {
     axios
       .get(`http://127.0.0.1:5000/video/${this.$route.params.video_id}`)
       .then((response) => {
-        if (response.data.subtitles.length != 0) {
-          this.timestampSubtitles = response.data.subtitles;
+        if (response.data) {
+          this.subtitle_text = response.data;
         }
-        console.log(response);
       })
       .catch((e) => {
         console.log(e);
       });
   },
   methods: {
-    markTimestamp() {
-      const videoElement = this.$refs.videoPlayer;
-      if (videoElement) {
-        const currentTime = videoElement.currentTime;
-        if (!this.timestampSubtitles.some((entry) => entry.startTime === currentTime)) {
-          this.markedStartTime = currentTime;
-          this.showInput = true;
-          this.markingEnd = false;
-          videoElement.pause();
-        }
-      }
-    },
-    handleTimeUpdate(currentTime) {
-      const matchingSubtitle = this.timestampSubtitles.find((entry) => {
-        return parseFloat(entry.start_timestamp) <= currentTime && parseFloat(entry.end_timestamp) >= currentTime;
-      });
-
-      if (matchingSubtitle) {
-        this.currentSubtitle = matchingSubtitle.subtitle;
-      } else {
-        this.currentSubtitle = null;
-      }
-    },
-    addStartTime() {
-      this.showInput = false;
-      this.markingEnd = true;
-      this.markedEndTime = null;
-    },
-    addEndTime() {
-      const videoElement = this.$refs.videoPlayer;
-      if (videoElement) {
-        const currentTime = videoElement.currentTime;
-        if (!this.timestampSubtitles.some((entry) => entry.endTime === currentTime)) {
-          this.markedEndTime = currentTime;
-          videoElement.pause();
-        }
-      }
-      if (this.subtitleInput && this.markedStartTime !== null && this.markedEndTime !== null) {
-        this.timestampSubtitles.push({
-          start_timestamp: this.markedStartTime.toFixed(2),
-          end_timestamp: this.markedEndTime.toFixed(2),
-          subtitle: this.subtitleInput,
-        });
-        this.showInput = false;
-        this.markingEnd = false;
-        this.markedStartTime = null;
-        this.markedEndTime = null;
-        this.subtitleInput = "";
-      }
-    },
-    cancelSubtitle() {
-      this.showInput = false;
-      this.markingEnd = false;
-      this.markedStartTime = null;
-      this.markedEndTime = null;
-      this.subtitleInput = "";
-    },
     submitSubtitles() {
-      const subtitles = this.timestampSubtitles.map((entry) => {
-        return {
-          start_timestamp: parseFloat(entry.startTime),
-          end_timestamp: parseFloat(entry.endTime),
-          subtitle: entry.subtitle,
-        };
-      });
+      if (this.subtitle_text.trim() === "") {
+        this.isTextArea = true;
+        return;
+      } else {
+        this.submiting = true;
+        this.isTextArea = false;
+        this.video_id = this.$route.params.video_id;
+        const url = `http://127.0.0.1:5000/subtitle/${this.video_id}`;
 
-      const videoId = this.$route.params.video_id;
-      const url = `http://127.0.0.1:5000/subtitle/${videoId}`;
-
-      const requestData = { subtitles };
-
-      axios
-        .post(url, requestData)
-        .then((response) => {
-          console.log("Subtitles added successfully:", response.data);
-        })
-        .catch((error) => {
-          console.error("Error adding subtitles:", error);
-        });
+        axios
+          .post(url, { subtitle_text: this.subtitle_text })
+          .then((response) => {
+            this.submiting = false;
+            this.submited = true;
+            console.log("Subtitles added successfully:", response.data);
+          })
+          .catch((error) => {
+            console.error("Error adding subtitles:", error);
+          });
+      }
     },
   },
 };
 </script>
 
-<style scoped></style>
+<style scoped>
+.subtitlecontainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.error-message {
+  color: red;
+  font-size: 12px;
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+textarea {
+  margin-top: 10px;
+  margin-bottom: 25px;
+  width: 500px;
+  height: 300px;
+  background: none repeat scroll 0 0 #d9e1ff;
+  border: 2px dashed #0c1430;
+  border-radius: 6px 6px 6px 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12) inset;
+  font-size: 1em;
+  line-height: 1.4em;
+  color: #2b365f;
+  font-weight: 400;
+  padding: 10px;
+  transition: background-color 0.2s ease 0s;
+}
+
+textarea:focus {
+  background: none repeat scroll 0 0 #ffffff;
+  color: #0c1430;
+  outline-width: 0;
+}
+
+.button {
+  background-color: #2b365f;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.button svg {
+  width: 24px;
+  height: 24px;
+  margin-right: 10px;
+}
+
+@media (max-width: 1000px) {
+  textarea {
+    width: 100%;
+  }
+  .subtitlecontainer {
+    padding: 10px;
+  }
+}
+</style>

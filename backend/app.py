@@ -1,108 +1,103 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, Response, send_file
+from models.models import db, Video, Subtitle
 from flask_cors import CORS
 import os
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
-
-
-from models.models import db
 db.init_app(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
-CORS(app)
-
-from models.models import Video, Subtitle
-
-# Create tables if they don't exist
-with app.app_context():
-    db.create_all()
-
-@app.route('/')
+@app.route("/", methods=["GET"])
 def list_videos():
-    videos = Video.query.all()
-    video_list = [{"id": video.id, "title": video.title} for video in videos]
-    return jsonify(video_list)
+    videos = Video.get_all()
+    videos_json = [video.json() for video in videos]
+    return jsonify(videos_json)
 
-@app.route('/upload', methods=['POST'])
+@app.route("/upload", methods=["POST"])
 def upload_video():
-    if 'video' not in request.files:
-        return "No video part in request", 400
-    
-    video_file = request.files['video']
-    if video_file.filename == '':
+    if "file" not in request.files:
+        return "No file part", 400
+
+    file = request.files["file"]
+    if file.filename == "":
         return "No selected file", 400
-    
-    filename = os.path.join(app.config['UPLOAD_FOLDER'], video_file.filename)
-    video_file.save(filename)
-    
-    title = request.form.get('title', 'Untitled Video')
-    video = Video(title=title, filename=filename)
-    db.session.add(video)
-    db.session.commit()
-    
-    return jsonify({"message": "Video uploaded successfully", "video_id": video.id})
 
-@app.route('/subtitle/<int:video_id>', methods=['POST'])
+    if file:
+        video_name = file.filename
+        video_path = os.path.join(app.config['UPLOAD_FOLDER'], video_name)
+        file.save(video_path)
+
+        new_video = Video(video_name=video_name, video_path=video_path)
+        new_video.insert()
+        return jsonify({"video_id": new_video.video_id})
+
+@app.route("/subtitle/<int:video_id>", methods=["POST"])
 def add_subtitle(video_id):
-    data = request.json
-    video = Video.query.get(video_id)
-    
+    subtitle_text = request.json.get("subtitle_text")
+    if not subtitle_text:
+        return "Subtitle text is required", 400
+
+    video = Video.get_by_id(video_id)
     if not video:
         return "Video not found", 404
-    
-    subtitles = data.get('subtitles', [])
-    for subtitle_data in subtitles:
-        subtitle = Subtitle(
-            video_id=video.id,
-            start_timestamp=subtitle_data['start_timestamp'],
-            end_timestamp=subtitle_data['end_timestamp'],
-            subtitle_text=subtitle_data['subtitle']
-        )
-        db.session.add(subtitle)
-    
-    db.session.commit()
-    return jsonify({"message": "Subtitles added successfully"})
 
-@app.route('/video/<int:video_id>', methods=['GET', 'DELETE'])
-def get_delete_video(video_id):
-    video = Video.query.get(video_id)
-    
+    new_subtitle = Subtitle(video_id=video_id, subtitle_text=subtitle_text)
+    new_subtitle.insert()
+
+    # Save the subtitle to a .vtt file
+    subtitle_filename = f"{video_id}.vtt"
+    subtitle_path = os.path.join(app.config['UPLOAD_FOLDER'], subtitle_filename)
+    with open(subtitle_path, "w") as subtitle_file:
+        subtitle_file.write("WEBVTT\n\n")
+        subtitle_file.write(f"{subtitle_text}")
+
+    return "Subtitle added successfully"
+
+@app.route("/video/<int:video_id>", methods=["GET", "DELETE"])
+def manage_video(video_id):
+    video = Video.get_by_id(video_id)
     if not video:
         return "Video not found", 404
-    
-    if request.method == 'GET':
-        subtitles = Subtitle.query.filter_by(video_id=video.id).all()
-        
-        video_data = {
-            "id": video.id,
-            "title": video.title,
-            "subtitles": [
-                {
-                    "start_timestamp": subtitle.start_timestamp,
-                    "end_timestamp": subtitle.end_timestamp,
-                    "subtitle": subtitle.subtitle_text
-                }
-                for subtitle in subtitles
-            ]
-        }
-        
-        return jsonify(video_data)
-    
-    if request.method == 'DELETE':
-        db.session.delete(video)
-        db.session.commit()
-        return jsonify({"message": "Video deleted successfully"})
 
+    if request.method == "GET":
+        return send_subtitle_file(video_id)
 
+    elif request.method == "DELETE":
+        video_path = video.video_path
+        subtitle_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{video_id}.vtt")
+
+        if os.path.exists(subtitle_path):
+            os.remove(subtitle_path)
+
+        video.delete()
+        os.remove(video_path)
+        return "Video deleted successfully"
+
+def send_subtitle_file(video_id):
+    subtitle_filename = f"{video_id}.vtt"
+    subtitle_path = os.path.join(app.config['UPLOAD_FOLDER'], subtitle_filename)
+    
+    if os.path.exists(subtitle_path):
+        with open(subtitle_path, "r") as subtitle_file:
+            subtitle_content = subtitle_file.read()
+            response = Response(subtitle_content, content_type='text/vtt')
+            response.headers["Content-Disposition"] = f"attachment; filename={subtitle_filename}"
+            return response
+    else:
+        return "Subtitle file not found", 404
+    
 @app.route('/video/<int:video_id>/stream', methods=['GET'])
 def stream_video(video_id):
-    video = Video.query.get(video_id)
+    video = Video.get_by_id(video_id)
 
     if not video:
         return "Video not found", 404
+    
+    return send_file(video.video_path, as_attachment=False)
 
-    return send_file(video.filename, as_attachment=False)
-
-if __name__ == '__main__':
+if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)

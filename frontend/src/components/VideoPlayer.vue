@@ -1,83 +1,65 @@
 <template>
-  <div class="container show-controls" ref="containerRef">
-    <div class="wrapper">
-      <div class="video-timeline">
-        <div class="progress-area">
-          <span>00:00</span>
-          <div class="progress-bar"></div>
+  <div class="videobody">
+    <div class="videocontainer show-controls" ref="containerRef">
+      <div class="wrapper">
+        <div class="video-timeline">
+          <div class="progress-area">
+            <span>00:00</span>
+            <div class="progress-bar"></div>
+          </div>
         </div>
+        <ul class="video-controls">
+          <li class="options left">
+            <button class="volume"><i class="fa-solid fa-volume-high"></i></button>
+            <input type="range" min="0" max="1" step="any" />
+            <div class="video-timer">
+              <p class="current-time">00:00</p>
+              <p class="separator">/</p>
+              <p class="video-duration">00:00</p>
+            </div>
+          </li>
+          <li class="options center">
+            <button class="skip-backward"><i class="fas fa-backward"></i></button>
+            <button class="play-pause"><i class="fas fa-play"></i></button>
+            <button class="skip-forward"><i class="fas fa-forward"></i></button>
+          </li>
+          <li class="options right">
+            <div class="playback-content">
+              <button class="playback-speed"><span class="material-symbols-rounded">slow_motion_video</span></button>
+              <ul class="speed-options">
+                <li data-speed="2">2x</li>
+                <li data-speed="1.5">1.5x</li>
+                <li data-speed="1" class="active">Normal</li>
+                <li data-speed="0.75">0.75x</li>
+                <li data-speed="0.5">0.5x</li>
+              </ul>
+            </div>
+            <button class="pic-in-pic"><span class="material-icons">picture_in_picture_alt</span></button>
+            <button class="fullscreen"><i class="fa-solid fa-expand"></i></button>
+          </li>
+        </ul>
       </div>
-      <ul class="video-controls">
-        <li class="options left">
-          <button class="volume"><i class="fa-solid fa-volume-high"></i></button>
-          <input type="range" min="0" max="1" step="any" />
-          <div class="video-timer">
-            <p class="current-time">00:00</p>
-            <p class="separator">/</p>
-            <p class="video-duration">00:00</p>
-          </div>
-        </li>
-        <li class="options center">
-          <button class="skip-backward"><i class="fas fa-backward"></i></button>
-          <button class="play-pause"><i class="fas fa-play"></i></button>
-          <button class="skip-forward"><i class="fas fa-forward"></i></button>
-        </li>
-        <li class="options right">
-          <div class="playback-content">
-            <button class="playback-speed"><span class="material-symbols-rounded">slow_motion_video</span></button>
-            <ul class="speed-options">
-              <li data-speed="2">2x</li>
-              <li data-speed="1.5">1.5x</li>
-              <li data-speed="1" class="active">Normal</li>
-              <li data-speed="0.75">0.75x</li>
-              <li data-speed="0.5">0.5x</li>
-            </ul>
-          </div>
-          <button class="pic-in-pic"><span class="material-icons">picture_in_picture_alt</span></button>
-          <button class="fullscreen"><i class="fa-solid fa-expand"></i></button>
-        </li>
-      </ul>
+      <video preload="metadata" crossorigin="anonymous">
+        <source :src="url('video')" />
+        <track label="English" kind="subtitles" srclang="en" :src="url()" default />
+        <!-- Your browser does not support the video tag. -->
+      </video>
     </div>
-    <video ref="videoPlayer" @timeupdate="handleTimeUpdateEvent">
-      <source :src="videoSrc ? videoSrc : 'http://127.0.0.1:5000/video/1/stream'" />
-      Your browser does not support the video tag.
-    </video>
   </div>
 </template>
 
 <script>
-import { ref, watch } from "vue";
-
 export default {
   name: "VideoPlayer",
-  props: {
-    videoSrc: String,
-  },
-  setup(props, { emit }) {
-    const videoPlayer = ref(null);
-    const handleTimeUpdateEvent = () => {
-      if (videoPlayer.value) {
-        const currentTime = videoPlayer.value.currentTime;
-        emit("timeupdate", currentTime);
+  methods: {
+    url(tagname) {
+      const video_id = this.$route.params.video_id;
+      if (tagname === "video") {
+        return `http://127.0.0.1:5000/video/${video_id}/stream`;
+      } else {
+        return `http://127.0.0.1:5000/video/${video_id}`;
       }
-    };
-    watch(videoPlayer, (newValue) => {
-      if (newValue) {
-        newValue.addEventListener("timeupdate", handleTimeUpdateEvent);
-      }
-    });
-    watch(
-      () => props.videoSrc,
-      () => {
-        if (videoPlayer.value) {
-          videoPlayer.value.removeEventListener("timeupdate", handleTimeUpdateEvent);
-        }
-      }
-    );
-
-    return {
-      videoPlayer,
-    };
+    },
   },
   mounted() {
     const container = this.$refs.containerRef;

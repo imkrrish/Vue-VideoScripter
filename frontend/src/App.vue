@@ -1,12 +1,17 @@
 <template>
-  <!-- <router-link to="/upload-video">UploadVideo</router-link> -->
-  <!-- <router-link to="/add-subtitles">AddSubtitles</router-link> -->
-  <router-view></router-view>
+  <div class="body">
+    <NavBar />
+    <router-view></router-view>
+  </div>
 </template>
 
 <script>
+import NavBar from "./components/NavBar.vue";
 export default {
   name: "App",
+  components: {
+    NavBar,
+  },
 };
 </script>
 
@@ -25,5 +30,9 @@ export default {
 }
 body {
   background-color: #f5f8ff;
+}
+.body {
+  height: 100vh;
+  width: 100vw;
 }
 </style>

@@ -1,10 +1,10 @@
+.vercel
+*.log
 .DS_Store
 .env
 .flaskenv
 *.pyc
 *.pyo
-uploads/
-instance/
 env/
 venv/
 .venv/
@@ -19,6 +19,8 @@ build/
 .idea/
 docs/_build/
 .vscode
+instance/
+uploads/
 
 # Coverage reports
 htmlcov/
