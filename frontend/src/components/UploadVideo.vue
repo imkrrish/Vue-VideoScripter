@@ -69,6 +69,7 @@ export default {
       uploading: false,
       uploaded: false,
       video_id: null,
+      API_URI:process.env.VUE_APP_API_URI
     };
   },
   methods: {
@@ -94,7 +95,7 @@ export default {
       const formData = new FormData();
       formData.append("file", this.videoFile);
       axios
-        .post("http://127.0.0.1:5000/upload", formData, {
+        .post(`${this.API_URI}/upload`, formData, {
           headers: {
             "Content-Type": "multipart/form-data",
           },

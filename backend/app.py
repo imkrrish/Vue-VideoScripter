@@ -2,12 +2,28 @@ from flask import Flask, request, jsonify, Response, send_file
 from models.models import db, Video, Subtitle
 from flask_cors import CORS
 import os
+import pyrebase
+from dotenv import load_dotenv
+
+load_dotenv()
+
+firebase_config = {
+    "apiKey": os.getenv("FIREBASE_API_KEY"),
+    "authDomain": os.getenv("FIREBASE_AUTH_DOMAIN"),
+    "projectId": os.getenv("FIREBASE_PROJECT_ID"),
+    "storageBucket": os.getenv("FIREBASE_STORAGE_BUCKET"),
+    "messagingSenderId": os.getenv("FIREBASE_MESSAGING_SENDER_ID"),
+    "appId": os.getenv("FIREBASE_APP_ID")
+}
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 db.init_app(app)
 CORS(app, resources={r"/*": {"origins": "*"}})
+
+firebase = pyrebase.initialize_app(firebase_config)
+storage = firebase.storage()
 
 @app.route("/", methods=["GET"])
 def list_videos():
@@ -95,7 +111,11 @@ def stream_video(video_id):
     if not video:
         return "Video not found", 404
     
-    return send_file(video.video_path, as_attachment=False)
+    video_path = video.video_path.replace("\\", "/")
+    if os.path.exists(video_path):
+        return send_file(video_path, as_attachment=False)
+    else:
+        return "Video file not found", 404
 
 if __name__ == "__main__":
     with app.app_context():

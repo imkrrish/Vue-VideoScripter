@@ -15,7 +15,7 @@
       </router-link>
 
       <div class="btncontainer">
-        <button class="editButton deletebutton" @click="deleteVideo(item.video_id)">Delete</button>
+        <!-- <button class="editButton deletebutton" @click="deleteVideo(item.video_id)">Delete</button> -->
         <router-link class="link" :to="`/add-subtitles/${item.video_id}`">
           <button class="editButton">Edit Subtitle</button>
         </router-link>
@@ -40,12 +40,13 @@ export default {
       obj: {
         list: null,
         empty: false,
+        API_URI: process.env.VUE_APP_API_URI,
       },
     };
   },
   methods: {
     getList() {
-      axios.get("http://127.0.0.1:5000").then((response) => {
+      axios.get(this.obj.API_URI).then((response) => {
         this.obj.list = response.data;
         if (this.obj.list.length === 0) {
           this.obj.empty = true;
@@ -56,7 +57,7 @@ export default {
     },
     deleteVideo(video_id) {
       axios
-        .delete(`http://127.0.0.1:5000/video/${video_id}`)
+        .delete(`${this.obj.API_URI}/video/${video_id}`)
         .then((response) => {
           console.log(response.data);
           this.getList();

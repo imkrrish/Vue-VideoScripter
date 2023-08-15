@@ -39,9 +39,9 @@
           </li>
         </ul>
       </div>
-      <video preload="metadata" crossorigin="anonymous">
-        <source :src="url('video')" />
-        <track label="English" kind="subtitles" srclang="en" :src="url()" default />
+      <video preload="metadata" crossorigin="Access-Control-Allow-Origin">
+        <source :src="VIDEO_SRC" />
+        <track label="English" kind="subtitles" srclang="en" :src="SUBTITLE_SRC" default />
         <!-- Your browser does not support the video tag. -->
       </video>
     </div>
@@ -51,17 +51,16 @@
 <script>
 export default {
   name: "VideoPlayer",
-  methods: {
-    url(tagname) {
-      const video_id = this.$route.params.video_id;
-      if (tagname === "video") {
-        return `http://127.0.0.1:5000/video/${video_id}/stream`;
-      } else {
-        return `http://127.0.0.1:5000/video/${video_id}`;
-      }
-    },
+  data() {
+    return {
+      API_URI: process.env.VUE_APP_API_URI,
+      VIDEO_SRC: "",
+      SUBTITLE_SRC: "",
+    };
   },
   mounted() {
+    this.VIDEO_SRC = this.API_URI + "/video/" + this.$route.params.video_id;
+    this.SUBTITLE_SRC = this.API_URI + "/subtitle/" + this.$route.params.video_id;
     const container = this.$refs.containerRef;
     const mainVideo = container.querySelector("video");
     const videoTimeline = container.querySelector(".video-timeline");

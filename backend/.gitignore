@@ -20,7 +20,6 @@ build/
 docs/_build/
 .vscode
 instance/
-uploads/
 
 # Coverage reports
 htmlcov/

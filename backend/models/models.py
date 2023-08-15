@@ -42,13 +42,15 @@ class Subtitle(db.Model):
     subtitle_id = db.Column(db.Integer, primary_key=True)
     video_id = db.Column(db.Integer, db.ForeignKey('video.video_id'))
     subtitle_text = db.Column(db.Text)
+    subtitle_path = db.Column(db.String(255))
 
-    def __init__(self, video_id, subtitle_text):
+    def __init__(self, video_id, subtitle_text, subtitle_path):
         self.video_id = video_id
         self.subtitle_text = subtitle_text
+        self.subtitle_path = subtitle_path
 
     def json(self):
-        return {'subtitle_id': self.subtitle_id, 'video_id': self.video_id, 'subtitle_text': self.subtitle_text}
+        return {'subtitle_id': self.subtitle_id, 'video_id': self.video_id, 'subtitle_text': self.subtitle_text, 'subtitle_path': self.subtitle_path}
 
     def insert(self):
         db.session.add(self)

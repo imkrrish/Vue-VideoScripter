@@ -57,11 +57,12 @@ export default {
       isTextArea: null,
       submiting: false,
       submited: false,
+      API_URI: process.env.VUE_APP_API_URI,
     };
   },
   mounted() {
     axios
-      .get(`http://127.0.0.1:5000/video/${this.$route.params.video_id}`)
+      .get(`${this.API_URI}/subtitle/${this.$route.params.video_id}`)
       .then((response) => {
         if (response.data) {
           this.subtitle_text = response.data;
@@ -80,7 +81,7 @@ export default {
         this.submiting = true;
         this.isTextArea = false;
         this.video_id = this.$route.params.video_id;
-        const url = `http://127.0.0.1:5000/subtitle/${this.video_id}`;
+        const url = `${this.API_URI}/subtitle/${this.video_id}`;
 
         axios
           .post(url, { subtitle_text: this.subtitle_text })
